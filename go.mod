@@ -1,4 +1,4 @@
-module github.com/AntiSlang/tracker
+module github.com/hse-tracker/backend
 
 go 1.25.1
 
