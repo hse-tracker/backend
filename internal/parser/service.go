@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AntiSlang/tracker/internal/storage"
-	"github.com/AntiSlang/tracker/internal/tgbot"
+	"github.com/hse-tracker/backend/internal/storage"
+	"github.com/hse-tracker/backend/internal/tgbot"
 )
 
 type Service struct {

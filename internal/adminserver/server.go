@@ -4,11 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/AntiSlang/tracker/internal/config"
-	"github.com/AntiSlang/tracker/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/hse-tracker/backend/internal/config"
+	"github.com/hse-tracker/backend/internal/storage"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -50,6 +50,7 @@ func (s *Server) Run() error {
 		r.Route("/user", func(r chi.Router) {
 			r.Post("/register", s.registerUserHandler)
 			r.Get("/me", s.getUserProfileHandler)
+			r.Post("/log-navigation", s.logNavigationHandler)
 		})
 
 		r.Route("/subjects", func(r chi.Router) {

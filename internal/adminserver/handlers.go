@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/AntiSlang/tracker/internal/storage"
 	"github.com/go-chi/chi/v5"
+	"github.com/hse-tracker/backend/internal/storage"
 )
 
 type RegisterUserRequest struct {
@@ -318,4 +318,22 @@ func (s *Server) assignTableHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+}
+
+type LogNavigationRequest struct {
+	TabName string `json:"tab_name"`
+}
+
+func (s *Server) logNavigationHandler(w http.ResponseWriter, r *http.Request) {
+	uid := getUserIDFromHeader(r)
+	var req LogNavigationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := s.db.LogNavigation(uid, req.TabName); err != nil {
+		http.Error(w, "failed to log", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

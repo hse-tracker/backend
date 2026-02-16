@@ -8,11 +8,12 @@ import (
 )
 
 type Config struct {
-	ServerHost          string `yaml:"server_host" env:"SERVER_HOST" env-default:"localhost"`
-	ServerPort          string `yaml:"server_port" env:"SERVER_PORT" env-default:"8080"`
-	DBPath              string `yaml:"db_path" env:"DB_PATH" env-required:"true"`
-	TelegramToken       string `yaml:"telegram_token" env:"TELEGRAM_TOKEN" env-required:"true"`
-	ParseInterval       string `yaml:"parse_interval" env:"PARSE_INTERVAL" env-default:"10m"`
+	ServerHost          string  `yaml:"server_host" env:"SERVER_HOST" env-default:"localhost"`
+	ServerPort          string  `yaml:"server_port" env:"SERVER_PORT" env-default:"8080"`
+	DBPath              string  `yaml:"db_path" env:"DB_PATH" env-required:"true"`
+	TelegramToken       string  `yaml:"telegram_token" env:"TELEGRAM_TOKEN" env-required:"true"`
+	ParseInterval       string  `yaml:"parse_interval" env:"PARSE_INTERVAL" env-default:"10m"`
+	AdminIDs            []int64 `yaml:"admin_ids" env:"ADMIN_IDS"`
 	ParseIntervalParsed time.Duration
 }
 

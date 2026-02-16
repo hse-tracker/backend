@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/AntiSlang/tracker/docs"
-	"github.com/AntiSlang/tracker/internal/adminserver"
-	"github.com/AntiSlang/tracker/internal/config"
-	"github.com/AntiSlang/tracker/internal/storage"
-	"github.com/AntiSlang/tracker/internal/tgbot"
-	"github.com/AntiSlang/tracker/internal/tools"
+	"github.com/hse-tracker/backend/docs"
+	"github.com/hse-tracker/backend/internal/adminserver"
+	"github.com/hse-tracker/backend/internal/config"
+	"github.com/hse-tracker/backend/internal/storage"
+	"github.com/hse-tracker/backend/internal/tgbot"
+	"github.com/hse-tracker/backend/internal/tools"
 )
 
 // @title HSE Tracker API
@@ -41,7 +41,7 @@ func main() {
 
 	go func() {
 		log.Println("Starting Telegram Bot...")
-		if err := gradesBot.Start(); err != nil {
+		if err := gradesBot.Start(cfg.AdminIDs); err != nil {
 			log.Fatalf("Failed to start Telegram Bot: %v", err)
 		}
 	}()

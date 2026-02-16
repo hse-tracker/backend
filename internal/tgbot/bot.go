@@ -1,11 +1,13 @@
 package tgbot
 
 import (
+	"bytes"
+	"encoding/csv"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/AntiSlang/tracker/internal/storage"
+	"github.com/hse-tracker/backend/internal/storage"
 	"gopkg.in/telebot.v3"
 )
 
@@ -22,7 +24,7 @@ func New(token string, db *storage.Storage) *Bot {
 	}
 }
 
-func (b *Bot) Start() error {
+func (b *Bot) Start(adminIDs []int64) error {
 	pref := telebot.Settings{
 		Token:  b.token,
 		Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
@@ -64,6 +66,49 @@ func (b *Bot) Start() error {
 
 		log.Printf("User registered: %d (%s)", user.ID, fullName)
 		return c.Send(fmt.Sprintf("Привет, %s! Я бот для отслеживания оценок в Вышке. Нажми кнопку, чтобы перейти в мини-приложение", fullName))
+	})
+
+	bot.Handle("/logs", func(c telebot.Context) error {
+		isAdmin := false
+		for _, id := range adminIDs {
+			if c.Sender().ID == id {
+				isAdmin = true
+				break
+			}
+		}
+		if !isAdmin {
+			return c.Send("У вас нет прав администратора.")
+		}
+
+		logs, err := b.db.GetAllNavigationLogs()
+		if err != nil {
+			return c.Send("Ошибка получения логов.")
+		}
+
+		buf := new(bytes.Buffer)
+		writer := csv.NewWriter(buf)
+		err = writer.Write([]string{"Timestamp", "UserID", "TabName"})
+		if err != nil {
+			return err
+		}
+
+		for _, l := range logs {
+			err := writer.Write([]string{
+				l.CreatedAt.Format(time.RFC3339),
+				fmt.Sprintf("%d", l.UserID),
+				l.TabName,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		writer.Flush()
+
+		doc := &telebot.Document{
+			File:     telebot.FromReader(buf),
+			FileName: "navigation_logs.csv",
+		}
+		return c.Send(doc)
 	})
 
 	log.Println("Telegram Bot started!")

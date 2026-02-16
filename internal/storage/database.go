@@ -9,10 +9,10 @@ import (
 
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 
-	dbase "github.com/AntiSlang/tracker/internal/db"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	dbase "github.com/hse-tracker/backend/internal/db"
 	"github.com/huandu/go-sqlbuilder"
 	_ "github.com/lib/pq"
 )
@@ -407,4 +407,46 @@ func (s *Storage) GetSubscribersForTable(tableID int) ([]int64, error) {
 		userIDs = append(userIDs, uid)
 	}
 	return userIDs, nil
+}
+
+type NavigationLog struct {
+	UserID    int64     `db:"user_id"`
+	TabName   string    `db:"tab_name"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+func (s *Storage) LogNavigation(userID int64, tabName string) error {
+	ib := sqlbuilder.NewInsertBuilder()
+	ib.InsertInto("navigation_logs").
+		Cols("user_id", "tab_name").
+		Values(userID, tabName)
+	query, args := ib.Build()
+	_, err := s.db.Exec(query, args...)
+	return err
+}
+
+func (s *Storage) GetAllNavigationLogs() ([]NavigationLog, error) {
+	sb := sqlbuilder.NewSelectBuilder()
+	sb.Select("user_id", "tab_name", "created_at").From("navigation_logs").OrderByDesc("created_at")
+	query, args := sb.Build()
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("error closing rows: %v", err)
+		}
+	}(rows)
+
+	var logs []NavigationLog
+	for rows.Next() {
+		var l NavigationLog
+		if err := rows.Scan(&l.UserID, &l.TabName, &l.CreatedAt); err != nil {
+			return nil, err
+		}
+		logs = append(logs, l)
+	}
+	return logs, nil
 }
