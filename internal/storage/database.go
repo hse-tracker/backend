@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"log"
 	"time"
+
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 
 	dbase "github.com/AntiSlang/tracker/internal/db"
 	"github.com/golang-migrate/migrate/v4"
@@ -124,12 +125,12 @@ func (s *Storage) UpsertUser(u User) error {
 		Values(u.ID, u.FirstName, u.MiddleName, u.LastName, u.ProgramID, u.CourseNumber, u.Language, u.NotificationsEnabled)
 
 	ib.SQL(`
-		ON CONFLICT (id) DO UPDATE SET 
-		first_name = excluded.first_name, 
-		middle_name = excluded.middle_name, 
-		last_name = excluded.last_name, 
-		program_id = excluded.program_id, 
-		course_number = excluded.course_number, 
+		ON CONFLICT (id) DO UPDATE SET
+		first_name = excluded.first_name,
+		middle_name = excluded.middle_name,
+		last_name = excluded.last_name,
+		program_id = excluded.program_id,
+		course_number = excluded.course_number,
 		updated_at = NOW()
 	`)
 
