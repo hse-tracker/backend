@@ -27,3 +27,5 @@ build
 
 config.yaml
 materials
+
+.DS_Store
