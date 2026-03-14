@@ -16,6 +16,7 @@ const (
 	GroupIDKey	ctxKey = "groupID"
 )
 
+// TODO: implement JWT tokens instead of base64 encoding
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -37,6 +38,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// getting user and group id from Split("userID:groupID", ":")
 		userID, err := strconv.ParseInt(parts[0], 10, 64)
 		if err != nil {
 			http.Error(w, "internal error", 500)
@@ -47,6 +49,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "internal error", 500)
 			return
 		}
+
+		// debug log
 		fmt.Println("\n", userID, groupID)
 
 		ctx := context.WithValue(r.Context(), UserIDKey, userID)

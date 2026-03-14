@@ -48,11 +48,13 @@ type SubjectResponse struct {
 	Status	string	`json:"status"`
 }
 
+// returns list of users subject
 func GetSubjectsHandler(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Context().Value(UserIDKey).(int64)
 		groupID := r.Context().Value(GroupIDKey).(int64)
 
+		// TODO: move SQL SELECT logic to "backend/storage/database.go"
 		var subjects []SubjectResponse
 		query := `
 			SELECT id, name, status

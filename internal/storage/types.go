@@ -4,13 +4,14 @@ import (
 	"time"
 )
 
+// Users group. Example "name":"БПИ228"
 type Group struct {
 	ID			int64		`db:"id"`
 	Name		string		`db:"name"`
 	CreatedAt	time.Time	`db:"created_at"`
 }
 
-
+// User. Example "full_name":"Иванов Иван Иванович"
 type User struct {
 	ID			int64		`db:"id"`
 	GroupID		int64		`db:"group_id"`
@@ -20,6 +21,7 @@ type User struct {
 	UpdatedAt	time.Time	`db:"updated_at"`
 }
 
+// Users/Groups subject. Example "name":"UX design"
 type Subject struct {
 	ID				int64		`db:"id"`
 	CreatorID		int64		`db:"creator_id"`
@@ -35,15 +37,30 @@ type Subject struct {
 	CreatedAt		time.Time	`db:"created_at"`
 }
 
+// Represents one(!) assessment point
 type GradeStructure struct {
 	ID			int64	`db:"id"`
+
+	// link to subject
 	SubjectID	int64	`db:"subject_id"`
+
+	// link to parent GradeStructure node
+	// can be null if root
 	ParentID	int64	`db:"parent_id"`
+
+	// name of current GradeStructure node
+	// example: "Итог", "ДЗ"
 	Name		string	`db:"name"`
+
+	// (???) could be removed in future
 	Type		string	`db:"type"`
+
+	// represents column index in google sheets
+	// example: (0..25) = ("A".."Z"), (26..51) = ("AA".."AZ"), etc
 	ColumnIndex	int		`db:"column_index"`
 }
 
+// Represent value of each GradeStructure node
 type StudentGrade struct {
 	ID					int64		`db:"id"`
 	UserID				int64		`db:"user_id"`
