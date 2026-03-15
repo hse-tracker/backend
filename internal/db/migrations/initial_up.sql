@@ -20,7 +20,7 @@ CREATE TABLE subjects (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT REFERENCES users(id) ON DELETE SET NULL, -- who created
     group_id BIGINT REFERENCES groups(id) ON DELETE CASCADE,
-    
+
     name VARCHAR(255) NOT NULL,
     url TEXT NOT NULL,
     group_connected BOOLEAN DEFAULT true,    -- checkbox "connect to the group"
@@ -29,7 +29,7 @@ CREATE TABLE subjects (
     status VARCHAR(50) DEFAULT 'processing', -- 'processing', 'ready', 'error'
     error_message TEXT,                      -- only if (status == 'error')
 
-    last_hash VARCHAR(255),                  -- last hash sum 
+    last_hash VARCHAR(255),                  -- last hash sum
     last_parsed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -39,7 +39,7 @@ CREATE TABLE grade_structures (
     id BIGSERIAL PRIMARY KEY,
     subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
     parent_id BIGINT REFERENCES grade_structures(id) ON DELETE CASCADE, -- recursive FK to parent
-    
+
     name VARCHAR(255) NOT NULL,    -- example: "Итог", "HW_AVG", "HW1"
     type VARCHAR(50) NOT NULL,     -- example: 'folder', 'value', 'formula', 'boolean'
     column_index INTEGER           -- could be NULL if virtual
@@ -50,10 +50,10 @@ CREATE TABLE student_grades (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     grade_structure_id BIGINT NOT NULL REFERENCES grade_structures(id) ON DELETE CASCADE, -- link to assessment node
-    
+
     value VARCHAR(255), -- example: "10", "5.5", "Н/Я", "Зачет"
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- student cant have 2 diff grades for same node
-    UNIQUE (user_id, grade_structure_id) 
+    UNIQUE (user_id, grade_structure_id)
 );

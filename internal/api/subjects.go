@@ -1,25 +1,25 @@
 package api
 
 import (
-	"fmt"
 	"encoding/json"
-	"mockBackend/internal/storage"
+	"fmt"
 	"net/http"
+
+	"github.com/hse-tracker/backend/internal/storage"
 
 	"github.com/jmoiron/sqlx"
 )
 
 type CreateSubjectRequest struct {
-	Name	string	`json:"name"`
-	URL		string	`json:"url"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
-
 
 func CreateSubjectHandler(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Context().Value(UserIDKey).(int64)
 		groupID := r.Context().Value(GroupIDKey).(int64)
-	
+
 		var req CreateSubjectRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
@@ -34,18 +34,15 @@ func CreateSubjectHandler(db *sqlx.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":		"subject created",
-			"subject_id":	subjectID,
-			"status":		"processing",
+		err = json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":    "subject created",
+			"subject_id": subjectID,
+			"status":     "processing",
 		})
+		if err != nil {
+			return
+		}
 	}
-}
-
-type SubjectResponse struct {
-	ID		int64	`json:"id"`
-	Name	string	`json:"name"`
-	Status	string	`json:"status"`
 }
 
 // returns list of users subject
@@ -54,29 +51,18 @@ func GetSubjectsHandler(db *sqlx.DB) http.HandlerFunc {
 		userID := r.Context().Value(UserIDKey).(int64)
 		groupID := r.Context().Value(GroupIDKey).(int64)
 
-		// TODO: move SQL SELECT logic to "backend/storage/database.go"
-		var subjects []SubjectResponse
-		query := `
-			SELECT id, name, status
-			FROM subjects 
-			WHERE group_id = $1 AND (group_connected = true OR creator_id = $2)
-			ORDER BY created_at DESC
-		`
-
-		err := db.Select(&subjects, query, groupID, userID)
+		subjects, err := storage.GetSubjects(db, userID, groupID)
 		if err != nil {
 			fmt.Println("error fetching subjects:", err)
 			http.Error(w, "internal error", 500)
 			return
 		}
 
-		// no subjects
-		if subjects == nil {
-			subjects =[]SubjectResponse{}
-		}
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(subjects)
+		err = json.NewEncoder(w).Encode(subjects)
+		if err != nil {
+			return
+		}
 	}
 }

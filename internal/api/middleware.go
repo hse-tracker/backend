@@ -2,60 +2,66 @@ package api
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type ctxKey string
 
 const (
-	UserIDKey	ctxKey = "userID"
-	GroupIDKey	ctxKey = "groupID"
+	UserIDKey  ctxKey = "userID"
+	GroupIDKey ctxKey = "groupID"
 )
 
-// TODO: implement JWT tokens instead of base64 encoding
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "missing auth header", 401)
-			return
-		}
+func AuthMiddleware(secret string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "missing auth header", http.StatusUnauthorized)
+				return
+			}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		decoded, err := base64.RawStdEncoding.DecodeString(tokenString)
-		if err != nil {
-			http.Error(w, "invalid token", 401)
-			return
-		}
+			const bearerPrefix = "Bearer "
+			if !strings.HasPrefix(authHeader, bearerPrefix) {
+				http.Error(w, "invalid auth header format", http.StatusUnauthorized)
+				return
+			}
+			tokenString := strings.TrimPrefix(authHeader, bearerPrefix)
+			tokenString = strings.TrimSpace(tokenString)
+			if tokenString == "" {
+				http.Error(w, "empty token", http.StatusUnauthorized)
+				return
+			}
 
-		parts := strings.Split(string(decoded), ":")
-		if len(parts) != 2 {
-			http.Error(w, "invalid token format", 401)
-			return
-		}
+			claims := &TokenClaims{}
+			token, err := jwt.ParseWithClaims(
+				tokenString,
+				claims,
+				func(t *jwt.Token) (interface{}, error) {
+					if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+						return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+					}
+					return []byte(secret), nil
+				},
+				jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+			)
+			if err != nil {
+				http.Error(w, "invalid token", http.StatusUnauthorized)
+				return
+			}
+			if !token.Valid {
+				http.Error(w, "invalid token", http.StatusUnauthorized)
+				return
+			}
 
-		// getting user and group id from Split("userID:groupID", ":")
-		userID, err := strconv.ParseInt(parts[0], 10, 64)
-		if err != nil {
-			http.Error(w, "internal error", 500)
-			return
-		}
-		groupID, err := strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			http.Error(w, "internal error", 500)
-			return
-		}
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, GroupIDKey, claims.GroupID)
 
-		// debug log
-		fmt.Println("\n", userID, groupID)
-
-		ctx := context.WithValue(r.Context(), UserIDKey, userID)
-		ctx = context.WithValue(ctx, GroupIDKey, groupID)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }

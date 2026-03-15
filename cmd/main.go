@@ -5,41 +5,67 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/hse-tracker/backend/internal/config"
+	"github.com/hse-tracker/backend/internal/tgbot"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 
-	"mockBackend/internal/api"
+	"github.com/hse-tracker/backend/internal/api"
 )
 
 func main() {
 	fmt.Println("--- mock backend started ---")
-	
-	// TODO: add url to .env
-	dsn := "postgres://admin:password@localhost:5432/mock_db?sslmode=disable"
-	db, err := sqlx.Connect("postgres", dsn)
+
+	cfg, err := config.Load("./config.yaml")
+	if err != nil {
+		log.Fatalf("config error: %v", err)
+	}
+
+	db, err := sqlx.Connect("postgres", cfg.DBPath)
 	if err != nil {
 		log.Fatalf("error while connecting to DB: %s\n", err)
 	}
-	defer db.Close()
+	defer func(db *sqlx.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatalf("error while closing DB: %s\n", err)
+		}
+	}(db)
 	fmt.Println("db connected")
 
 	r := chi.NewRouter()
-	
-	r.Use(api.CorsHandler.Handler) 	// CORS
-	r.Use(middleware.Logger)		// LOGGER
-	r.Use(middleware.Recoverer)		// PANIC RECOVER
 
-	r.Post("/api/register", api.RegisterHandler(db))
+	corsMiddleware := api.NewCorsHandler(cfg)
+
+	r.Use(corsMiddleware.Handler) // CORS func
+	r.Use(middleware.Logger)      // LOGGER
+	r.Use(middleware.Recoverer)   // PANIC RECOVER
+
+	r.Post("/api/register", api.RegisterHandler(db, cfg.JWTSecret))
 
 	r.Group(func(r chi.Router) {
-		r.Use(api.AuthMiddleware)
+		r.Use(api.AuthMiddleware(cfg.JWTSecret))
 		r.Post("/api/subjects", api.CreateSubjectHandler(db))
 		r.Get("/api/subjects", api.GetSubjectsHandler(db))
 	})
 
-	port := ":8080"
+	port := ":" + cfg.ServerPort
 	fmt.Printf("server is running on %s", port)
-	http.ListenAndServe(port, r)
+
+	gradesBot := tgbot.New(cfg.TelegramToken, db)
+
+	go func() {
+		fmt.Println("starting tg bot")
+		if err := gradesBot.Start(cfg.AdminIDs); err != nil {
+			log.Fatalf("failed to start tg bot: %v", err)
+		}
+	}()
+
+	err = http.ListenAndServe(port, r)
+	if err != nil {
+		return
+	}
 }
