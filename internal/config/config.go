@@ -9,6 +9,7 @@ import (
 type Config struct {
 	ServerHost    string  `yaml:"server_host" env:"SERVER_HOST" env-default:"localhost"`
 	ServerPort    string  `yaml:"server_port" env:"SERVER_PORT" env-default:"8080"`
+	ClientPort    string  `yaml:"client_port" env:"CLIENT_PORT" env-default:"5173"`
 	DBPath        string  `yaml:"db_path" env:"DB_PATH" env-required:"true"`
 	TelegramToken string  `yaml:"telegram_token" env:"TELEGRAM_TOKEN" env-required:"true"`
 	MaxAge        int     `yaml:"max_age" env:"MAX_AGE" env-default:"300"`

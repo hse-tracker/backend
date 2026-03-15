@@ -51,7 +51,7 @@ func GetSubjectsHandler(db *sqlx.DB) http.HandlerFunc {
 		userID := r.Context().Value(UserIDKey).(int64)
 		groupID := r.Context().Value(GroupIDKey).(int64)
 
-		subjects, err := storage.GetSubjects(db, userID, groupID)
+		subjects, err := storage.GetSubjects(db, groupID, userID)
 		if err != nil {
 			fmt.Println("error fetching subjects:", err)
 			http.Error(w, "internal error", 500)
