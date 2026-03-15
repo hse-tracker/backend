@@ -2,15 +2,17 @@ package api
 
 import (
 	"github.com/go-chi/cors"
+	"github.com/hse-tracker/backend/internal/config"
 )
 
 // CORS
-var CorsHandler = cors.New(cors.Options{
-// TODO: replace "*" with origin domain
-	AllowedOrigins: []string{"*"},
-	AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH",},
-	AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With",},
-	ExposedHeaders: []string{"Link", "X-Total-Count",},
-	AllowCredentials: true,
-	MaxAge: 300, // 5min
-})
+func NewCorsHandler(cfg *config.Config) *cors.Cors {
+	return cors.New(cors.Options{
+		AllowedOrigins:   []string{cfg.ServerHost + ":" + cfg.ServerPort},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With"},
+		ExposedHeaders:   []string{"Link", "X-Total-Count"},
+		AllowCredentials: true,
+		MaxAge:           cfg.MaxAge,
+	})
+}

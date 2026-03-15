@@ -1,14 +1,21 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"encoding/json"
-	"encoding/base64"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/hse-tracker/backend/internal/storage"
 	"github.com/jmoiron/sqlx"
-	"mockBackend/internal/storage"
 )
+
+type TokenClaims struct {
+	UserID  int64 `json:"user_id"`
+	GroupID int64 `json:"group_id"`
+	jwt.RegisteredClaims
+}
 
 // user register request data type
 type RegisterRequest struct {
@@ -22,7 +29,7 @@ type RegisterResponse struct {
 }
 
 // register handler
-func RegisterHandler(db *sqlx.DB) http.HandlerFunc {
+func RegisterHandler(db *sqlx.DB, secret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// decoding JSON
 		var req RegisterRequest
@@ -40,16 +47,33 @@ func RegisterHandler(db *sqlx.DB) http.HandlerFunc {
 		}
 		fmt.Printf("user created: \n%s, \n%d\n", user.FullName, user.GroupID)
 
-		// TODO: integrate jwt tokens
-		rawToken := fmt.Sprintf("%d:%d", user.ID, user.GroupID)
-		mockToken := base64.StdEncoding.EncodeToString([]byte(rawToken))
+		claims := TokenClaims{
+			UserID:  user.ID,
+			GroupID: user.GroupID,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signedToken, err := token.SignedString([]byte(secret))
+		if err != nil {
+			fmt.Printf("jwt error: %s\n", err)
+			http.Error(w, "internal error", 500)
+			return
+		}
 
 		// sending response
 		resp := RegisterResponse{
-			Token: mockToken,
+			Token: signedToken,
 		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(resp)
+		err = json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			return
+		}
 	}
 }
