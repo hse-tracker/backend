@@ -13,7 +13,7 @@
 
 # credentials
 creds
-release.json
+keys.txt
 .idea
 
 # env file

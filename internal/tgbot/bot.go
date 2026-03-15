@@ -5,6 +5,8 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hse-tracker/backend/internal/storage"
@@ -65,9 +67,43 @@ func (b *Bot) Start(adminIDs []int64) error {
 			return c.Send("У вас нет прав администратора.")
 		}
 
+		var startProvided, endProvided bool
+		var startTs, endTs int64
+
+		text := c.Message().Text
+		parts := strings.Fields(text)
+
+		for _, p := range parts[1:] {
+			if strings.HasPrefix(p, "start_date=") {
+				if v, err := strconv.ParseInt(strings.TrimPrefix(p, "start_date="), 10, 64); err == nil {
+					startProvided = true
+					startTs = v
+				}
+			} else if strings.HasPrefix(p, "end_date=") {
+				if v, err := strconv.ParseInt(strings.TrimPrefix(p, "end_date="), 10, 64); err == nil {
+					endProvided = true
+					endTs = v
+				}
+			}
+		}
+
 		logs, err := storage.GetAllNavigationLogs(b.db)
 		if err != nil {
 			return c.Send("Ошибка получения логов.")
+		}
+
+		filtered := make([]storage.NavigationLog, 0, len(logs))
+		for _, l := range logs {
+			ts := l.CreatedAt.Unix()
+
+			if startProvided && ts < startTs {
+				continue
+			}
+			if endProvided && ts > endTs {
+				continue
+			}
+
+			filtered = append(filtered, l)
 		}
 
 		buf := new(bytes.Buffer)
@@ -77,7 +113,7 @@ func (b *Bot) Start(adminIDs []int64) error {
 			return err
 		}
 
-		for _, l := range logs {
+		for _, l := range filtered {
 			err := writer.Write([]string{
 				l.CreatedAt.Format(time.RFC3339),
 				fmt.Sprintf("%d", l.UserID),
