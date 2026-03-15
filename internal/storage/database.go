@@ -100,4 +100,3 @@ func GetSubjects(db *sqlx.DB, groupID, userID int64) ([]SubjectResponse, error) 
 
 	return subjects, nil
 }
-

@@ -38,9 +38,9 @@ type Subject struct {
 }
 
 type SubjectResponse struct {
-	ID		int64  `json:"id"`
-	Name	string `json:"name"`
-	Status	string `json:"status"`
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
 // Represents one(!) assessment point
