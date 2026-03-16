@@ -29,3 +29,5 @@ config.yaml
 materials
 
 .DS_Store
+
+all.txt
