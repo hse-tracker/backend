@@ -19,15 +19,15 @@ jobs:
 
       - name: Build Go binary
         run: |
-          cd backend
           GOOS=linux GOARCH=amd64 go build -o hse_backend ./cmd/main.go
-
+      
       - name: Prepare files for deploy
         run: |
           mkdir deploy_backend
-          cp backend/hse_backend deploy_backend/
-          cp backend/docker-compose.yml deploy_backend/
-          cp backend/internal/db/migrations/initial_up.sql deploy_backend/
+          cp hse_backend deploy_backend/
+          cp docker-compose.yml deploy_backend/
+          mkdir -p deploy_backend/internal/db/migrations
+          cp internal/db/migrations/initial_up.sql deploy_backend/internal/db/migrations/
 
       - name: Deploy to Server
         uses: appleboy/scp-action@v0.1.7
