@@ -13,7 +13,7 @@
 
 # credentials
 creds
-release.json
+keys.txt
 .idea
 
 # env file
@@ -27,3 +27,7 @@ build
 
 config.yaml
 materials
+
+.DS_Store
+
+all.txt

@@ -2,37 +2,31 @@ package config
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	ServerHost          string  `yaml:"server_host" env:"SERVER_HOST" env-default:"localhost"`
-	ServerPort          string  `yaml:"server_port" env:"SERVER_PORT" env-default:"8080"`
-	DBPath              string  `yaml:"db_path" env:"DB_PATH" env-required:"true"`
-	TelegramToken       string  `yaml:"telegram_token" env:"TELEGRAM_TOKEN" env-required:"true"`
-	ParseInterval       string  `yaml:"parse_interval" env:"PARSE_INTERVAL" env-default:"10m"`
-	AdminIDs            []int64 `yaml:"admin_ids" env:"ADMIN_IDS"`
-	ParseIntervalParsed time.Duration
+	ServerHost    string  `yaml:"server_host" env:"SERVER_HOST" env-default:"localhost"`
+	ServerPort    string  `yaml:"server_port" env:"SERVER_PORT" env-default:"8080"`
+	ClientPort    string  `yaml:"client_port" env:"CLIENT_PORT" env-default:"5173"`
+	DBPath        string  `yaml:"db_path" env:"DB_PATH" env-required:"true"`
+	TelegramToken string  `yaml:"telegram_token" env:"TELEGRAM_TOKEN" env-required:"true"`
+	MaxAge        int     `yaml:"max_age" env:"MAX_AGE" env-default:"300"`
+	AdminIDs      []int64 `yaml:"admin_ids" env:"ADMIN_IDS"`
+	JWTSecret     string  `yaml:"jwt_secret" env:"JWT_SECRET" env-required:"true"`
 }
 
 func Load(configPath string) (*Config, error) {
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		return nil, fmt.Errorf("could not read config file %s: %w", configPath, err)
+		fmt.Printf("could not read yaml config file %s: %w\n", configPath, err)
+		if err := cleanenv.ReadEnv(&cfg); err != nil {
+			return nil, fmt.Errorf("could not read environment variables: %w", err)
+		}
+		return &cfg, nil
 	}
-
-	if err := cleanenv.ReadEnv(&cfg); err != nil {
-		return nil, fmt.Errorf("could not read environment variables: %w", err)
-	}
-
-	interval, err := time.ParseDuration(cfg.ParseInterval)
-	if err != nil {
-		return nil, fmt.Errorf("wrong 'check_interval' format: %w", err)
-	}
-	cfg.ParseIntervalParsed = interval
 
 	return &cfg, nil
 }

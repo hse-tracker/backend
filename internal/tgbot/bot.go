@@ -5,19 +5,23 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hse-tracker/backend/internal/storage"
+	"github.com/jmoiron/sqlx"
+
 	"gopkg.in/telebot.v3"
 )
 
 type Bot struct {
 	token string
-	db    *storage.Storage
+	db    *sqlx.DB
 	api   *telebot.Bot
 }
 
-func New(token string, db *storage.Storage) *Bot {
+func New(token string, db *sqlx.DB) *Bot {
 	return &Bot{
 		token: token,
 		db:    db,
@@ -47,24 +51,7 @@ func (b *Bot) Start(adminIDs []int64) error {
 			fullName = user.Username
 		}
 
-		newUser := storage.User{
-			ID:                   user.ID,
-			FirstName:            user.FirstName,
-			LastName:             user.LastName,
-			MiddleName:           user.Username,
-			ProgramID:            nil,
-			CourseNumber:         1,
-			Language:             user.LanguageCode,
-			NotificationsEnabled: true,
-		}
-
-		err := b.db.UpsertUser(newUser)
-		if err != nil {
-			log.Printf("Failed to register user %d: %v", user.ID, err)
-			return c.Send("Произошла ошибка при регистрации. Попробуйте позже.")
-		}
-
-		log.Printf("User registered: %d (%s)", user.ID, fullName)
+		log.Printf("user %d (%s) writing to bot", user.ID, fullName)
 		return c.Send(fmt.Sprintf("Привет, %s! Я бот для отслеживания оценок в Вышке. Нажми кнопку, чтобы перейти в мини-приложение", fullName))
 	})
 
@@ -80,9 +67,43 @@ func (b *Bot) Start(adminIDs []int64) error {
 			return c.Send("У вас нет прав администратора.")
 		}
 
-		logs, err := b.db.GetAllNavigationLogs()
+		var startProvided, endProvided bool
+		var startTs, endTs int64
+
+		text := c.Message().Text
+		parts := strings.Fields(text)
+
+		for _, p := range parts[1:] {
+			if strings.HasPrefix(p, "start_date=") {
+				if v, err := strconv.ParseInt(strings.TrimPrefix(p, "start_date="), 10, 64); err == nil {
+					startProvided = true
+					startTs = v
+				}
+			} else if strings.HasPrefix(p, "end_date=") {
+				if v, err := strconv.ParseInt(strings.TrimPrefix(p, "end_date="), 10, 64); err == nil {
+					endProvided = true
+					endTs = v
+				}
+			}
+		}
+
+		logs, err := storage.GetAllNavigationLogs(b.db)
 		if err != nil {
 			return c.Send("Ошибка получения логов.")
+		}
+
+		filtered := make([]storage.NavigationLog, 0, len(logs))
+		for _, l := range logs {
+			ts := l.CreatedAt.Unix()
+
+			if startProvided && ts < startTs {
+				continue
+			}
+			if endProvided && ts > endTs {
+				continue
+			}
+
+			filtered = append(filtered, l)
 		}
 
 		buf := new(bytes.Buffer)
@@ -92,7 +113,7 @@ func (b *Bot) Start(adminIDs []int64) error {
 			return err
 		}
 
-		for _, l := range logs {
+		for _, l := range filtered {
 			err := writer.Write([]string{
 				l.CreatedAt.Format(time.RFC3339),
 				fmt.Sprintf("%d", l.UserID),
