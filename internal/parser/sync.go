@@ -85,6 +85,8 @@ func syncAllGrades(ctx context.Context, db *sqlx.DB, credsPath string, bot Notif
 }
 
 func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsPath string, bot Notifier) error {
+	log.Printf("[Sync] Syncing subject '%s' (ID: %d)", sub.Name, sub.ID)
+
 	sheetID, gid, err := ExtractSheetInfo(sub.URL)
 	if err != nil {
 		return err
@@ -132,6 +134,8 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 		if !exists {
 			continue // user is not in db
 		}
+
+		log.Printf("[Sync] Processing student: %s (ID: %d)", studentName, userID)
 
 		// check users grades
 		for _, node := range nodes {

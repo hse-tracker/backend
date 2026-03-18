@@ -42,6 +42,8 @@ func ProcessNewSubject(db *sqlx.DB, subjectID int64, url, credsPath, deepseekKey
 // main pipeline for project processing
 // depth 2
 func runParsingPipeline(ctx context.Context, db *sqlx.DB, subjectID int64, url, credsPath, deepseekKey string) error {
+	log.Printf("[Parser] Starting pipeline for SubjectID=%d, URL=%s", subjectID, url)
+
 	// get sheet ID from raw link
 	sheetID, gid, err := ExtractSheetInfo(url)
 	if err != nil {
@@ -49,12 +51,14 @@ func runParsingPipeline(ctx context.Context, db *sqlx.DB, subjectID int64, url, 
 	}
 
 	// get raw data from Google Sheets API
+	log.Printf("[Parser] Fetching data from Google Sheets (SheetID: %s)", sheetID)
 	rawValues, err := FetchSheetData(ctx, sheetID, gid, credsPath)
 	if err != nil {
 		return err
 	}
 
 	// format raw data for LLM
+	log.Printf("[Parser] Sending data to DeepSeek for analysis...")
 	tableText := FormatForLLM(rawValues)
 
 	// send request to deepseek
