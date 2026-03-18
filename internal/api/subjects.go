@@ -127,7 +127,7 @@ func DeleteSubjectHandler(db *sqlx.DB) http.HandlerFunc {
 			http.Error(w, "invalid subject id", http.StatusBadRequest)
 			return
 		}
-		
+
 		log.Printf("[API] DeleteSubject: ID=%d, GroupID=%d", subjectID, groupID)
 
 		err = storage.DeleteSubject(db, subjectID, groupID)
