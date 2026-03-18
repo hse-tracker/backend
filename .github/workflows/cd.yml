@@ -20,7 +20,7 @@ jobs:
       - name: Build Go binary
         run: |
           GOOS=linux GOARCH=amd64 go build -o hse_backend ./cmd/main.go
-      
+
       - name: Prepare files for deploy
         run: |
           mkdir deploy_backend
