@@ -89,7 +89,8 @@ func (b *Bot) Start(adminIDs []int64) error {
 
 		logs, err := storage.GetAllNavigationLogs(b.db)
 		if err != nil {
-			return c.Send("Ошибка получения логов.")
+			log.Printf(" [Bot] Ошибка получения логов из БД: %v", err)
+			return c.Send(fmt.Sprintf("Ошибка получения логов: %v", err))
 		}
 
 		filtered := make([]storage.NavigationLog, 0, len(logs))

@@ -8,7 +8,7 @@ import (
 // CORS
 func NewCorsHandler(cfg *config.Config) *cors.Cors {
 	return cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://" + cfg.ServerHost + ":" + cfg.ClientPort},
+		AllowedOrigins:   []string{ "*" },
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With"},
 		ExposedHeaders:   []string{"Link", "X-Total-Count"},

@@ -7,7 +7,7 @@ CREATE TABLE groups (
 
 -- Users
 CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     group_id BIGINT REFERENCES groups(id) ON DELETE SET NULL,
     full_name VARCHAR(255) NOT NULL,
     language VARCHAR(10) DEFAULT 'ru',
@@ -31,7 +31,10 @@ CREATE TABLE subjects (
 
     last_hash VARCHAR(255),                  -- last hash sum
     last_parsed_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    name_column_index INTEGER,               -- column with student names
+    data_start_row INTEGER                   -- row with 1st student
 );
 
 -- Grade structures
@@ -42,7 +45,10 @@ CREATE TABLE grade_structures (
 
     name VARCHAR(255) NOT NULL,    -- example: "Итог", "HW_AVG", "HW1"
     type VARCHAR(50) NOT NULL,     -- example: 'folder', 'value', 'formula', 'boolean'
-    column_index INTEGER           -- could be NULL if virtual
+    column_index INTEGER,          -- can be NULL if virtual
+
+    weight DOUBLE PRECISION,       -- assessment weight, example: 0.5, 0.3, 0.1 
+    display_formula VARCHAR(255)   -- readable formula
 );
 
 -- Student grades
@@ -56,4 +62,12 @@ CREATE TABLE student_grades (
 
     -- student cant have 2 diff grades for same node
     UNIQUE (user_id, grade_structure_id)
+);
+
+-- Navigation logs
+CREATE TABLE navigation_logs (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tab_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

@@ -2,12 +2,17 @@ package api
 
 import (
 	"encoding/json"
+	"database/sql"
 	"fmt"
 	"net/http"
-
-	"github.com/hse-tracker/backend/internal/storage"
+	"strconv"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/go-chi/chi/v5"
+
+	"github.com/hse-tracker/backend/internal/storage"
+	"github.com/hse-tracker/backend/internal/parser"
+	"github.com/hse-tracker/backend/internal/config"
 )
 
 type CreateSubjectRequest struct {
@@ -15,7 +20,7 @@ type CreateSubjectRequest struct {
 	URL  string `json:"url"`
 }
 
-func CreateSubjectHandler(db *sqlx.DB) http.HandlerFunc {
+func CreateSubjectHandler(db *sqlx.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Context().Value(UserIDKey).(int64)
 		groupID := r.Context().Value(GroupIDKey).(int64)
@@ -30,7 +35,10 @@ func CreateSubjectHandler(db *sqlx.DB) http.HandlerFunc {
 		subjectID, err := storage.AddSubject(db, userID, groupID, req.Name, req.URL)
 		if err != nil {
 			http.Error(w, "internal error", 500)
+			return
 		}
+
+		go parser.ProcessNewSubject(db, subjectID, req.URL, cfg.GoogleCredsPath, cfg.DeepSeekKey)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -64,5 +72,69 @@ func GetSubjectsHandler(db *sqlx.DB) http.HandlerFunc {
 		if err != nil {
 			return
 		}
+	}
+}
+
+// returns whole grade structure of subject
+func GetSubjectHandler(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := r.Context().Value(UserIDKey).(int64)
+		groupID := r.Context().Value(GroupIDKey).(int64)
+
+		// get subject ID from URL
+		subjectIDStr := chi.URLParam(r, "id")
+		subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid subject id", http.StatusBadRequest)
+			return
+		}
+
+		// get grade struct from db
+		resp, err := storage.GetSubjectStructure(db, subjectID, userID, groupID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "subject not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		// return json to frontend
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			return
+		}
+	}
+}
+
+// deletes subject by id
+func DeleteSubjectHandler(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		groupID := r.Context().Value(GroupIDKey).(int64)
+
+		subjectIDStr := chi.URLParam(r, "id")
+		subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid subject id", http.StatusBadRequest)
+			return
+		}
+
+		err = storage.DeleteSubject(db, subjectID, groupID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "subject not found or access denied", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "subject deleted",
+		})
 	}
 }
