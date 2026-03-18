@@ -1,16 +1,16 @@
 package api
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
-	"strings"
-	"sort"
-	"net/url"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
+	"sort"
+	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hse-tracker/backend/internal/storage"
@@ -25,13 +25,13 @@ func ValidateInitData(initData, token string) (int64, error) {
 	hash := vals.Get("hash")
 	vals.Del("hash")
 
-	var keys[]string
+	var keys []string
 	for k := range vals {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	var dataCheckArr[]string
+	var dataCheckArr []string
 	for _, k := range keys {
 		dataCheckArr = append(dataCheckArr, fmt.Sprintf("%s=%s", k, vals.Get(k)))
 	}
@@ -100,7 +100,6 @@ func RegisterHandler(db *sqlx.DB, secret string, tgToken string) http.HandlerFun
 			http.Error(w, "unauthorized telegram data", http.StatusUnauthorized)
 			return
 		}
-
 
 		user, err := storage.RegisterUser(db, tgID, req.FullName, req.Group)
 		if err != nil {

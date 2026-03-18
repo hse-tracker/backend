@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
 	"log"
+	"net/http"
 
 	"github.com/hse-tracker/backend/internal/storage"
 	"github.com/jmoiron/sqlx"

@@ -1,40 +1,40 @@
 package parser
 
 import (
-    "encoding/json"
-    "fmt"
-    "context"
-    "log"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 
-    "github.com/sashabaranov/go-openai"
+	"github.com/sashabaranov/go-openai"
 )
 
 type LLMResponse struct {
-    StudentNameColumnIndex	int				`json:"student_name_column_index"`
-    DataStartRow			int				`json:"data_start_row"`
-    Structure				[]LLMGradeNode	`json:"structure"`
+	StudentNameColumnIndex int            `json:"student_name_column_index"`
+	DataStartRow           int            `json:"data_start_row"`
+	Structure              []LLMGradeNode `json:"structure"`
 }
 
 type LLMGradeNode struct {
-    Name           string          `json:"name"`
-    Type           string          `json:"type"` 
-    ColumnIndex    *int            `json:"column_index"`
-    Weight         *float64        `json:"weight"`
-    DisplayFormula *string         `json:"display_formula"`
-    Children       []LLMGradeNode  `json:"children"`
+	Name           string         `json:"name"`
+	Type           string         `json:"type"`
+	ColumnIndex    *int           `json:"column_index"`
+	Weight         *float64       `json:"weight"`
+	DisplayFormula *string        `json:"display_formula"`
+	Children       []LLMGradeNode `json:"children"`
 }
 
 // sends ALL subject info to deepseek
 // depth 3
 func AnalyzeTableWithDeepSeek(ctx context.Context, apiKey, tableContext string) (*LLMResponse, error) {
-    config := openai.DefaultConfig(apiKey)
-    config.BaseURL = "https://api.deepseek.com/v1"
-    client := openai.NewClientWithConfig(config)
+	config := openai.DefaultConfig(apiKey)
+	config.BaseURL = "https://api.deepseek.com/v1"
+	client := openai.NewClientWithConfig(config)
 
-    systemPrompt := 
-`Ты - эксперт по анализу образовательных ведомостей из Google Sheets.
+	systemPrompt :=
+		`Ты - эксперт по анализу образовательных ведомостей из Google Sheets.
 Твоя задача: изучить предоставленные данные (первые несколько строк, включая формулы) и вернуть СТРОГИЙ JSON со структурой оценок.
-    
+
 ПРАВИЛА:
 1. Индексы: Найди student_name_column_index (0 для A, 1 для B) и data_start_row (строка начала данных студентов, счет с 0).
 2. ИГНОРИРОВАНИЕ ОКРУГЛЕНИЙ (КРИТИЧЕСКИ ВАЖНО): Часто в таблицах есть колонка с точным баллом (например, "Итог", "Накоп", 8.50) и колонка с округлением (например, "Округл", "Округление", 9.00). Ты ОБЯЗАН полностью игнорировать колонку с округлением! Главным (корневым) узлом структуры должна быть оценка БЕЗ округления (точный итог). Вообще не включай колонку с округлением в итоговый JSON.
@@ -80,45 +80,45 @@ func AnalyzeTableWithDeepSeek(ctx context.Context, apiKey, tableContext string) 
   ]
 }`
 
-    userPrompt := fmt.Sprintf("Проанализируй таблицу и верни структуру (тип узлов: folder, formula, value).\n\nТаблица:\n%s", tableContext)
+	userPrompt := fmt.Sprintf("Проанализируй таблицу и верни структуру (тип узлов: folder, formula, value).\n\nТаблица:\n%s", tableContext)
 
-    req := openai.ChatCompletionRequest{
-        Model: "deepseek-chat",
-        Messages:[]openai.ChatCompletionMessage{
-            {
-                Role:    openai.ChatMessageRoleSystem,
-                Content: systemPrompt,
-            },
-            {
-                Role:    openai.ChatMessageRoleUser,
-                Content: userPrompt,
-            },
-        },
-        ResponseFormat: &openai.ChatCompletionResponseFormat{
-            Type: openai.ChatCompletionResponseFormatTypeJSONObject,
-        },
-        Temperature: 0.1,
-    }
+	req := openai.ChatCompletionRequest{
+		Model: "deepseek-chat",
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: systemPrompt,
+			},
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: userPrompt,
+			},
+		},
+		ResponseFormat: &openai.ChatCompletionResponseFormat{
+			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
+		},
+		Temperature: 0.1,
+	}
 
-    resp, err := client.CreateChatCompletion(ctx, req)
-    if err != nil {
-        return nil, fmt.Errorf("deepseek api error: %w", err)
-    }
+	resp, err := client.CreateChatCompletion(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("deepseek api error: %w", err)
+	}
 
-    if len(resp.Choices) == 0 {
-        return nil, fmt.Errorf("empty response from DeepSeek")
-    }
+	if len(resp.Choices) == 0 {
+		return nil, fmt.Errorf("empty response from DeepSeek")
+	}
 
-    rawJSON := resp.Choices[0].Message.Content
+	rawJSON := resp.Choices[0].Message.Content
 
-    // debug log
-    log.Println("- - - AnalyzeTableWithDeepSeek - - -")
-    log.Println(rawJSON)
-    
-    var result LLMResponse
-    if err := json.Unmarshal([]byte(rawJSON), &result); err != nil {
-        return nil, fmt.Errorf("failed to parse JSON from LLM: %w\nRaw: %s", err, rawJSON)
-    }
+	// debug log
+	log.Println("- - - AnalyzeTableWithDeepSeek - - -")
+	log.Println(rawJSON)
 
-    return &result, nil
+	var result LLMResponse
+	if err := json.Unmarshal([]byte(rawJSON), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON from LLM: %w\nRaw: %s", err, rawJSON)
+	}
+
+	return &result, nil
 }

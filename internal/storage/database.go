@@ -32,7 +32,7 @@ func RegisterUser(db *sqlx.DB, tgID int64, fullName string, groupName string) (*
 	queryCreateUser := `
 		INSERT INTO users (id, group_id, full_name)
 		VALUES ($1, $2, $3)
-		ON CONFLICT (id) DO UPDATE 
+		ON CONFLICT (id) DO UPDATE
 		SET group_id = EXCLUDED.group_id, full_name = EXCLUDED.full_name, updated_at = CURRENT_TIMESTAMP
 		RETURNING id`
 
@@ -74,12 +74,12 @@ func AddSubject(db *sqlx.DB, creatorID int64, groupID int64,
 
 // gets ALL subjects
 func GetSubjects(db *sqlx.DB, groupID, userID int64) ([]SubjectResponse, error) {
-	var subjects[]SubjectResponse
-	
+	var subjects []SubjectResponse
+
 	query := `
-		SELECT 
-			s.id, 
-			s.name, 
+		SELECT
+			s.id,
+			s.name,
 			s.status,
 			sg.value AS grade
 		FROM subjects s
@@ -95,7 +95,7 @@ func GetSubjects(db *sqlx.DB, groupID, userID int64) ([]SubjectResponse, error) 
 	}
 
 	if subjects == nil {
-		subjects =[]SubjectResponse{}
+		subjects = []SubjectResponse{}
 	}
 
 	return subjects, nil
@@ -112,7 +112,7 @@ func GetSubjectStructure(db *sqlx.DB, subjectID, userID, groupID int64) (*Subjec
 
 	// get whole grade structure and add values of current student
 	queryGrades := `
-		SELECT 
+		SELECT
 			gs.id, gs.parent_id, gs.name, gs.type, gs.weight, gs.display_formula,
 			sg.value
 		FROM grade_structures gs
@@ -120,14 +120,14 @@ func GetSubjectStructure(db *sqlx.DB, subjectID, userID, groupID int64) (*Subjec
 		WHERE gs.subject_id = $1
 		ORDER BY gs.id ASC
 	`
-	
-	var rows[]GradeRow
+
+	var rows []GradeRow
 	if err := db.Select(&rows, queryGrades, subjectID, userID); err != nil {
 		return nil, err
 	}
 
 	// - convert array to tree -
-	
+
 	// initialise map for quick search nodes by ID
 	nodesMap := make(map[int64]*GradeNodeResponse)
 	for _, r := range rows {
@@ -170,15 +170,15 @@ func DeleteSubject(db *sqlx.DB, subjectID, groupID int64) error {
 	if err != nil {
 		return err
 	}
-	
+
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
 		return err
 	}
-	
+
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
 	}
-	
+
 	return nil
 }

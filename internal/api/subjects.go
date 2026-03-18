@@ -1,18 +1,18 @@
 package api
 
 import (
-	"encoding/json"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
 
-	"github.com/hse-tracker/backend/internal/storage"
-	"github.com/hse-tracker/backend/internal/parser"
 	"github.com/hse-tracker/backend/internal/config"
+	"github.com/hse-tracker/backend/internal/parser"
+	"github.com/hse-tracker/backend/internal/storage"
 )
 
 type CreateSubjectRequest struct {

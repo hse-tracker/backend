@@ -35,7 +35,7 @@ type SyncNode struct {
 	ColumnIndex int    `db:"column_index"`
 }
 
-// infinite update cycle 
+// infinite update cycle
 func StartSyncWorker(db *sqlx.DB, credsPath string, bot Notifier, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {
@@ -63,10 +63,10 @@ func syncAllGrades(ctx context.Context, db *sqlx.DB, credsPath string, bot Notif
 	// get subjects with available grade structure
 	var subjects []SyncSubject
 	query := `
-		SELECT id, group_id, name, url, name_column_index, data_start_row 
-		FROM subjects 
+		SELECT id, group_id, name, url, name_column_index, data_start_row
+		FROM subjects
 		WHERE status = 'ready' AND name_column_index IS NOT NULL AND data_start_row IS NOT NULL`
-	
+
 	if err := db.SelectContext(ctx, &subjects, query); err != nil {
 		return fmt.Errorf("error while getting parsed subjects: %w", err)
 	}
@@ -77,13 +77,12 @@ func syncAllGrades(ctx context.Context, db *sqlx.DB, credsPath string, bot Notif
 		} else {
 			log.Printf("[SyncWorker] subjectID: %d update success\n", sub.ID)
 		}
-		
+
 		time.Sleep(5 * time.Second)
 	}
 
 	return nil
 }
-
 
 func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsPath string, bot Notifier) error {
 	sheetID, gid, err := ExtractSheetInfo(sub.URL)
@@ -110,7 +109,7 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 	}
 
 	// get grade structure nodes for subject (only with columnID not null)
-	var nodes[]SyncNode
+	var nodes []SyncNode
 	if err := db.SelectContext(ctx, &nodes, `SELECT id, name, column_index FROM grade_structures WHERE subject_id = $1 AND column_index IS NOT NULL`, sub.ID); err != nil {
 		return err
 	}
@@ -148,18 +147,18 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 			// get previous grade
 			var oldVal string
 			err := db.GetContext(ctx, &oldVal, `SELECT value FROM student_grades WHERE user_id = $1 AND grade_structure_id = $2`, userID, node.ID)
-			
+
 			isNew := err == sql.ErrNoRows
 			isChanged := err == nil && oldVal != newVal
 
 			if isNew || isChanged {
 				// write or update grade
 				upsertQuery := `
-					INSERT INTO student_grades (user_id, grade_structure_id, value, updated_at) 
+					INSERT INTO student_grades (user_id, grade_structure_id, value, updated_at)
 					VALUES ($1, $2, $3, NOW())
-					ON CONFLICT (user_id, grade_structure_id) DO UPDATE 
+					ON CONFLICT (user_id, grade_structure_id) DO UPDATE
 					SET value = EXCLUDED.value, updated_at = NOW()`
-				
+
 				_, dbErr := db.ExecContext(ctx, upsertQuery, userID, node.ID, newVal)
 				if dbErr != nil {
 					log.Printf("[SyncWorker] Ошибка сохранения оценки юзера %d: %v", userID, dbErr)
@@ -195,7 +194,7 @@ func cellString(val interface{}) string {
 	if val == nil {
 		return ""
 	}
-	
+
 	// UNFORMATTED_VALUE returns float64 or string
 	str := fmt.Sprintf("%v", val)
 	return strings.TrimSpace(str)

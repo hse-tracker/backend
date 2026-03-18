@@ -3,13 +3,13 @@ package parser
 import (
 	"context"
 	"fmt"
-	"strings"
-	"regexp"
 	"log"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"google.golang.org/api/option"
-    "google.golang.org/api/sheets/v4"
+	"google.golang.org/api/sheets/v4"
 )
 
 // extract sheet ID from url
@@ -79,20 +79,20 @@ func FetchSheetData(ctx context.Context, sheetID string, gid int64, credsPath st
 // convert raw sheets data to readable format for LLM
 // depth 3
 func FormatForLLM(values [][]interface{}) string {
-    var sb strings.Builder
-    rowValues := make([]string, 0, 26) 
+	var sb strings.Builder
+	rowValues := make([]string, 0, 26)
 
-    for i, row := range values {
-        sb.WriteString(fmt.Sprintf("Строка %d: ", i+1))
-        
-        rowValues = rowValues[:0]
-        
-        for j, val := range row {
-            colLetter := string(rune('A' + j))
-            rowValues = append(rowValues, fmt.Sprintf("%s=\"%v\"", colLetter, val))
-        }
-        sb.WriteString(strings.Join(rowValues, ", ") + "\n")
-    }
+	for i, row := range values {
+		sb.WriteString(fmt.Sprintf("Строка %d: ", i+1))
+
+		rowValues = rowValues[:0]
+
+		for j, val := range row {
+			colLetter := string(rune('A' + j))
+			rowValues = append(rowValues, fmt.Sprintf("%s=\"%v\"", colLetter, val))
+		}
+		sb.WriteString(strings.Join(rowValues, ", ") + "\n")
+	}
 
 	// debug log
 	log.Println("- - - FormatForLLM - - -")
@@ -126,7 +126,7 @@ func FetchSheetDataForSync(ctx context.Context, sheetID string, gid int64, creds
 
 	// max data range
 	readRange := fmt.Sprintf("'%s'!A1:ZZ1000", sheetName)
-	
+
 	// get sheet data with UNFORMATTED_VALUE
 	resp, err := srv.Spreadsheets.Values.Get(sheetID, readRange).ValueRenderOption("UNFORMATTED_VALUE").Do()
 	if err != nil {

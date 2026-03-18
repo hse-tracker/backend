@@ -47,7 +47,7 @@ CREATE TABLE grade_structures (
     type VARCHAR(50) NOT NULL,     -- example: 'folder', 'value', 'formula', 'boolean'
     column_index INTEGER,          -- can be NULL if virtual
 
-    weight DOUBLE PRECISION,       -- assessment weight, example: 0.5, 0.3, 0.1 
+    weight DOUBLE PRECISION,       -- assessment weight, example: 0.5, 0.3, 0.1
     display_formula VARCHAR(255)   -- readable formula
 );
 

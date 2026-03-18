@@ -36,7 +36,7 @@ type Subject struct {
 	LastParsedAt    time.Time `db:"last_parsed_at"`
 	CreatedAt       time.Time `db:"created_at"`
 	NameColumnIndex *int      `db:"name_column_index"`
-    DataStartRow    *int      `db:"data_start_row"`
+	DataStartRow    *int      `db:"data_start_row"`
 }
 
 type SubjectResponse struct {
@@ -68,8 +68,8 @@ type GradeStructure struct {
 	// example: (0..25) = ("A".."Z"), (26..51) = ("AA".."AZ"), etc
 	ColumnIndex int `db:"column_index"`
 
-	Weight *float64 `db:"weight"`
-	DisplayFormula string `db:"display_formula"`
+	Weight         *float64 `db:"weight"`
+	DisplayFormula string   `db:"display_formula"`
 }
 
 // Represent value of each GradeStructure node
@@ -108,5 +108,5 @@ type SubjectStructureResponse struct {
 	ID        int64                `json:"id"`
 	Name      string               `json:"name"`
 	Status    string               `json:"status"`
-	Structure[]*GradeNodeResponse `json:"structure"`
+	Structure []*GradeNodeResponse `json:"structure"`
 }
