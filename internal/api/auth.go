@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -84,6 +85,8 @@ func RegisterHandler(db *sqlx.DB, secret string, tgToken string) http.HandlerFun
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
+		
+		log.Printf("[API] Register request: FullName='%s', Group='%s'", req.FullName, req.Group)
 
 		var tgID int64
 

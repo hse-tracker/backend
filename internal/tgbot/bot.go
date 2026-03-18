@@ -67,6 +67,8 @@ func (b *Bot) Start(adminIDs []int64) error {
 			return c.Send("У вас нет прав администратора.")
 		}
 
+		log.Printf("[Bot] Admin %d requested navigation logs CSV", c.Sender().ID)
+
 		var startProvided, endProvided bool
 		var startTs, endTs int64
 
@@ -145,6 +147,10 @@ func (b *Bot) SendMessage(userID int64, text string) error {
 
 	recipient := &telebot.Chat{ID: userID}
 
-	_, err := b.api.Send(recipient, text)
+	log.Printf("[Bot] Sending notification to UserID=%d", userID)
+	_, err := b.api.Send(recipient, text, telebot.ModeMarkdown)
+
+	time.Sleep(500 * time.Millisecond)
+
 	return err
 }

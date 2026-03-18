@@ -2,7 +2,10 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -10,15 +13,22 @@ import (
 )
 
 func RegisterUser(db *sqlx.DB, tgID int64, fullName string, groupName string) (*User, error) {
+	groupName = strings.ToLower(strings.Join(strings.Fields(groupName), ""))
+	log.Printf("[Storage] DB RegisterUser: TG_ID=%d, Name='%s', Group='%s'", tgID, fullName, groupName)
+
 	tx, err := db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("error while starting transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func(tx *sqlx.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+		}
+	}(tx)
 
 	var groupID int64
 	err = tx.Get(&groupID, "SELECT id FROM groups WHERE name = $1", groupName)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		queryCreateGroup := `INSERT INTO groups (name) VALUES ($1) RETURNING id`
 		err = tx.QueryRowx(queryCreateGroup, groupName).Scan(&groupID)
 		if err != nil {
@@ -58,7 +68,7 @@ func RegisterUser(db *sqlx.DB, tgID int64, fullName string, groupName string) (*
 // TODO: add groupConnected handler
 func AddSubject(db *sqlx.DB, creatorID int64, groupID int64,
 	name string, url string) (int64, error) {
-
+	log.Printf("[Storage] DB AddSubject: Name='%s', GroupID=%d, CreatorID=%d", name, groupID, creatorID)
 	var newSubjectID int64
 	query := `
 		INSERT INTO subjects (creator_id, group_id, name, url, group_connected, status)

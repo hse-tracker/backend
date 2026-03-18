@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,6 +25,8 @@ func CreateSubjectHandler(db *sqlx.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Context().Value(UserIDKey).(int64)
 		groupID := r.Context().Value(GroupIDKey).(int64)
+
+		log.Printf("[API] CreateSubject: UserID=%d, GroupID=%d", userID, groupID)
 
 		var req CreateSubjectRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -59,6 +62,8 @@ func GetSubjectsHandler(db *sqlx.DB) http.HandlerFunc {
 		userID := r.Context().Value(UserIDKey).(int64)
 		groupID := r.Context().Value(GroupIDKey).(int64)
 
+		log.Printf("[API] GetSubjects: UserID=%d, GroupID=%d", userID, groupID)
+
 		subjects, err := storage.GetSubjects(db, groupID, userID)
 		if err != nil {
 			fmt.Println("error fetching subjects:", err)
@@ -88,6 +93,8 @@ func GetSubjectHandler(db *sqlx.DB) http.HandlerFunc {
 			http.Error(w, "invalid subject id", http.StatusBadRequest)
 			return
 		}
+
+		log.Printf("[API] GetSubjectStructure: ID=%d, UserID=%d", subjectID, userID)
 
 		// get grade struct from db
 		resp, err := storage.GetSubjectStructure(db, subjectID, userID, groupID)
@@ -120,6 +127,8 @@ func DeleteSubjectHandler(db *sqlx.DB) http.HandlerFunc {
 			http.Error(w, "invalid subject id", http.StatusBadRequest)
 			return
 		}
+		
+		log.Printf("[API] DeleteSubject: ID=%d, GroupID=%d", subjectID, groupID)
 
 		err = storage.DeleteSubject(db, subjectID, groupID)
 		if err != nil {
