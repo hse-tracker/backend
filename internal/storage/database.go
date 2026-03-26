@@ -91,6 +91,7 @@ func GetSubjects(db *sqlx.DB, groupID, userID int64) ([]SubjectResponse, error) 
 			s.id,
 			s.name,
 			s.status,
+			s.error_message,
 			sg.value AS grade
 		FROM subjects s
 		LEFT JOIN grade_structures gs ON gs.subject_id = s.id AND gs.parent_id IS NULL
