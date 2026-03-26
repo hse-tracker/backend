@@ -40,10 +40,11 @@ type Subject struct {
 }
 
 type SubjectResponse struct {
-	ID     int64   `json:"id" db:"id"`
-	Name   string  `json:"name" db:"name"`
-	Status string  `json:"status" db:"status"`
-	Grade  *string `json:"grade" db:"grade"`
+	ID           int64   `json:"id" db:"id"`
+	Name         string  `json:"name" db:"name"`
+	Status       string  `json:"status" db:"status"`
+	ErrorMessage *string `json:"error_message" db:"error_message"`
+	Grade        *string `json:"grade" db:"grade"`
 }
 
 // Represents one(!) assessment point
