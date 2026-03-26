@@ -15,6 +15,7 @@ import (
 	"github.com/hse-tracker/backend/internal/config"
 	"github.com/hse-tracker/backend/internal/parser"
 	"github.com/hse-tracker/backend/internal/tgbot"
+	database "github.com/hse-tracker/backend/internal/db"
 )
 
 func main() {
@@ -31,6 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("error while connecting to DB: %s\n", err)
 	}
+
+	// run migrations
+	if err := database.RunMigrations(db); err != nil {
+        log.Fatalf("db error: %v", err)
+    }
 
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)

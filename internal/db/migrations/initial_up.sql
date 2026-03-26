@@ -1,12 +1,12 @@
 -- User groups
-CREATE TABLE groups (
+CREATE TABLE IF NOT EXISTS groups (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Users
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY,
     group_id BIGINT REFERENCES groups(id) ON DELETE SET NULL,
     full_name VARCHAR(255) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE users (
 );
 
 -- Subject tables
-CREATE TABLE subjects (
+CREATE TABLE IF NOT EXISTS subjects (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT REFERENCES users(id) ON DELETE SET NULL, -- who created
     group_id BIGINT REFERENCES groups(id) ON DELETE CASCADE,
@@ -38,7 +38,7 @@ CREATE TABLE subjects (
 );
 
 -- Grade structures
-CREATE TABLE grade_structures (
+CREATE TABLE IF NOT EXISTS grade_structures (
     id BIGSERIAL PRIMARY KEY,
     subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
     parent_id BIGINT REFERENCES grade_structures(id) ON DELETE CASCADE, -- recursive FK to parent
@@ -52,7 +52,7 @@ CREATE TABLE grade_structures (
 );
 
 -- Student grades
-CREATE TABLE student_grades (
+CREATE TABLE IF NOT EXISTS student_grades (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     grade_structure_id BIGINT NOT NULL REFERENCES grade_structures(id) ON DELETE CASCADE, -- link to assessment node
@@ -65,7 +65,7 @@ CREATE TABLE student_grades (
 );
 
 -- Navigation logs
-CREATE TABLE navigation_logs (
+CREATE TABLE IF NOT EXISTS navigation_logs (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     tab_name VARCHAR(255) NOT NULL,
