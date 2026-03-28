@@ -124,8 +124,8 @@ func FetchSheetDataForSync(ctx context.Context, sheetID string, gid int64, creds
 		sheetName = doc.Sheets[0].Properties.Title
 	}
 
-	// max data range
-	readRange := fmt.Sprintf("'%s'!A1:ZZ1000", sheetName)
+	// medium data range
+	readRange := fmt.Sprintf("'%s'!A1:AZ200", sheetName)
 
 	// get sheet data with UNFORMATTED_VALUE
 	resp, err := srv.Spreadsheets.Values.Get(sheetID, readRange).ValueRenderOption("UNFORMATTED_VALUE").Do()

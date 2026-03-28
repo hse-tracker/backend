@@ -13,9 +13,9 @@ import (
 
 	"github.com/hse-tracker/backend/internal/api"
 	"github.com/hse-tracker/backend/internal/config"
+	database "github.com/hse-tracker/backend/internal/db"
 	"github.com/hse-tracker/backend/internal/parser"
 	"github.com/hse-tracker/backend/internal/tgbot"
-	database "github.com/hse-tracker/backend/internal/db"
 )
 
 func main() {
@@ -35,12 +35,13 @@ func main() {
 
 	// run migrations
 	if err := database.RunMigrations(db); err != nil {
-        log.Fatalf("db error: %v", err)
-    }
+		log.Fatalf("db error: %v", err)
+	}
 
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(1 * time.Minute)
 
 	defer func(db *sqlx.DB) {
 		err := db.Close()
