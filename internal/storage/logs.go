@@ -30,7 +30,7 @@ func LogNavigation(db *sqlx.DB, userID int64, tabName string) error {
 
 func GetAllNavigationLogs(db *sqlx.DB) ([]NavigationLog, error) {
 	sb := sqlbuilder.NewSelectBuilder()
-	sb.Select("user_id", "tab_name", "created_at").From("navigation_logs").OrderBy("created_at DESC")
+	sb.Select("user_id", "tab_name", "created_at").From("navigation_logs").OrderBy("created_at DESC").Limit(5000)
 	query, args := sb.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	rows, err := db.Query(query, args...)
 	if err != nil {
