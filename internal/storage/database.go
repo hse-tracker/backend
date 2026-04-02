@@ -92,7 +92,8 @@ func GetSubjects(db *sqlx.DB, groupID, userID int64) ([]SubjectResponse, error) 
 			s.name,
 			s.status,
 			s.error_message,
-			sg.value AS grade
+			sg.value AS grade,
+			(s.creator_id = $2) AS is_creator
 		FROM subjects s
 		LEFT JOIN grade_structures gs ON gs.subject_id = s.id AND gs.parent_id IS NULL
 		LEFT JOIN student_grades sg ON sg.grade_structure_id = gs.id AND sg.user_id = $2
