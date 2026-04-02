@@ -104,12 +104,6 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 		return err
 	}
 
-	// map "normalize name" -> User ID
-	userMap := make(map[string]int64)
-	for _, u := range users {
-		userMap[normalizeName(u.FullName)] = u.ID
-	}
-
 	// get grade structure nodes for subject (only with columnID not null)
 	var nodes []SyncNode
 	if err := db.SelectContext(ctx, &nodes, `SELECT id, name, column_index FROM grade_structures WHERE subject_id = $1 AND column_index IS NOT NULL`, sub.ID); err != nil {
@@ -130,7 +124,7 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 		}
 
 		// trying to find user in db
-		userID, exists := userMap[normalizeName(studentName)]
+		userID, exists := matchUser(studentName, users)
 		if !exists {
 			continue // user is not in db
 		}
@@ -191,6 +185,46 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 // example: " Иванов   Иван Иванович " -> "иванов иван иванович"
 func normalizeName(name string) string {
 	return strings.ToLower(strings.Join(strings.Fields(name), " "))
+}
+
+// normalized name -> user id
+func matchUser(cellName string, users []SyncUser) (int64, bool) {
+	normCell := normalizeName(cellName)
+	if normCell == "" {
+		return 0, false
+	}
+
+	cellParts := strings.Fields(normCell)
+	if len(cellParts) == 0 {
+		return 0, false
+	}
+	cellFirstWord := cellParts[0]
+
+	// normal tables
+	for _, u := range users {
+		if normalizeName(u.FullName) == normCell {
+			return u.ID, true
+		}
+	}
+
+	// surname as a prefix
+	for _, u := range users {
+		normDB := normalizeName(u.FullName)
+		if strings.HasPrefix(normDB, normCell+" ") {
+			return u.ID, true
+		}
+	}
+
+	// double-surnames fallback
+	for _, u := range users {
+		dbParts := strings.Fields(normalizeName(u.FullName))
+		if len(dbParts) > 0 && dbParts[0] == cellFirstWord {
+			return u.ID, true
+		}
+	}
+
+	// not found
+	return 0, false
 }
 
 // converts Google API value to string
