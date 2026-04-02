@@ -45,6 +45,7 @@ type SubjectResponse struct {
 	Status       string  `json:"status" db:"status"`
 	ErrorMessage *string `json:"error_message" db:"error_message"`
 	Grade        *string `json:"grade" db:"grade"`
+	IsCreator    bool    `json:"is_creator" db:"is_creator"`
 }
 
 // Represents one(!) assessment point
