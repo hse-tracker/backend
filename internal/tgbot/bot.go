@@ -30,8 +30,9 @@ func New(token string, db *sqlx.DB) *Bot {
 
 func (b *Bot) Start(adminIDs []int64) error {
 	pref := telebot.Settings{
-		Token:  b.token,
-		Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
+		Token:     b.token,
+		Poller:    &telebot.LongPoller{Timeout: 10 * time.Second},
+		ParseMode: telebot.ModeMarkdown,
 	}
 
 	bot, err := telebot.NewBot(pref)
@@ -52,7 +53,17 @@ func (b *Bot) Start(adminIDs []int64) error {
 		}
 
 		log.Printf("user %d (%s) writing to bot", user.ID, fullName)
-		return c.Send(fmt.Sprintf("Привет, %s! Я бот для отслеживания оценок в Вышке. Нажми кнопку, чтобы перейти в мини-приложение", fullName))
+		album := telebot.Album{
+			&telebot.Photo{
+				File:    telebot.FromDisk("materials/Frame 3.png"),
+				Caption: "**Твои оценки теперь в телеграме**\nПрепод вот-вот выставит оценки, и ты весь день проверяешь ведомость.\nЗнакомо? А что, если мы скажем тебе, что больше не нужно этого делать?\nВстречай @hsetrackerbot – бот, который мгновенно пришлет тебе новые оценки в телеграм и подскажет, сколько баллов нужно набрать на экзамене, чтобы закрыть предмет.\nСосредоточься на учебе, а расчетом оценок займется бот @hsetrackerbot!\n\nПодробнее - в карточках",
+			},
+			&telebot.Photo{File: telebot.FromDisk("materials/Frame 4.png")},
+			&telebot.Photo{File: telebot.FromDisk("materials/Frame 5.png")},
+			&telebot.Photo{File: telebot.FromDisk("materials/Frame 6.png")},
+		}
+
+		return c.SendAlbum(album)
 	})
 
 	bot.Handle("/logs", func(c telebot.Context) error {
