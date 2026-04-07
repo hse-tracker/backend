@@ -186,7 +186,7 @@ func (b *Bot) ensureReminderTable() error {
 func (b *Bot) scheduleMessage(userID int64) error {
 	_, err := b.db.Exec(`
 		INSERT INTO tg_reminders (user_id, send_at, sent_at)
-		VALUES ($1, NOW() + INTERVAL '3 minutes', NULL)
+		VALUES ($1, NOW() + INTERVAL '48 hours', NULL)
 		ON CONFLICT (user_id) DO NOTHING
 	`, userID)
 	return err
