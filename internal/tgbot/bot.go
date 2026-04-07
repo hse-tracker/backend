@@ -2,6 +2,7 @@ package tgbot
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"log"
@@ -41,7 +42,15 @@ func (b *Bot) Start(adminIDs []int64) error {
 	}
 	b.api = bot
 
+	if err := b.ensureReminderTable(); err != nil {
+		return fmt.Errorf("failed to ensure reminder table: %w", err)
+	}
+
+	go b.reminderWorker()
+
 	bot.Handle("/start", func(c telebot.Context) error {
+		_ = b.scheduleMessage(c.Sender().ID)
+
 		user := c.Sender()
 
 		fullName := user.FirstName
@@ -64,6 +73,14 @@ func (b *Bot) Start(adminIDs []int64) error {
 		}
 
 		return c.SendAlbum(album)
+	})
+
+	// На первое обычное текстовое сообщение тоже ставим напоминание.
+	bot.Handle(telebot.OnText, func(c telebot.Context) error {
+		if strings.HasPrefix(c.Text(), "/") {
+			return nil
+		}
+		return b.scheduleMessage(c.Sender().ID)
 	})
 
 	bot.Handle("/logs", func(c telebot.Context) error {
@@ -139,6 +156,10 @@ func (b *Bot) Start(adminIDs []int64) error {
 		}
 		writer.Flush()
 
+		if err := writer.Error(); err != nil {
+			return err
+		}
+
 		doc := &telebot.Document{
 			File:     telebot.FromReader(buf),
 			FileName: "navigation_logs.csv",
@@ -149,6 +170,76 @@ func (b *Bot) Start(adminIDs []int64) error {
 	log.Println("Telegram Bot started!")
 	bot.Start()
 	return nil
+}
+
+func (b *Bot) ensureReminderTable() error {
+	_, err := b.db.Exec(`
+		CREATE TABLE IF NOT EXISTS tg_reminders (
+			user_id BIGINT PRIMARY KEY,
+			send_at TIMESTAMPTZ NOT NULL,
+			sent_at TIMESTAMPTZ NULL
+		)
+	`)
+	return err
+}
+
+func (b *Bot) scheduleMessage(userID int64) error {
+	_, err := b.db.Exec(`
+		INSERT INTO tg_reminders (user_id, send_at, sent_at)
+		VALUES ($1, NOW() + INTERVAL '3 minutes', NULL)
+		ON CONFLICT (user_id) DO NOTHING
+	`, userID)
+	return err
+}
+
+func (b *Bot) reminderWorker() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		b.sendDueReminders()
+		<-ticker.C
+	}
+}
+
+func (b *Bot) sendDueReminders() {
+	rows, err := b.db.Query(`
+		SELECT user_id
+		FROM tg_reminders
+		WHERE sent_at IS NULL AND send_at <= NOW()
+	`)
+	if err != nil {
+		log.Printf("[Bot] failed to query due reminders: %v", err)
+		return
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
+
+	for rows.Next() {
+		var userID int64
+		if err := rows.Scan(&userID); err != nil {
+			log.Printf("[Bot] failed to scan reminder row: %v", err)
+			continue
+		}
+
+		if err := b.SendMessage(userID, "Привет, это команда @hsetrackerbot! Просим пройти мини-опрос для улучшения нашего мини-аппа — это займет 2 минуты, но очень поможет сделать бот лучше❤️\n\nСсылка на форму:\nhttps://forms.yandex.ru/cloud/698dae06d046881ae20edfb8/"); err != nil {
+			log.Printf("[Bot] failed to send reminder to %d: %v", userID, err)
+			continue
+		}
+
+		_, err := b.db.Exec(`
+			UPDATE tg_reminders
+			SET sent_at = NOW()
+			WHERE user_id = $1
+		`, userID)
+		if err != nil {
+			log.Printf("[Bot] failed to mark reminder as sent for %d: %v", userID, err)
+		}
+	}
 }
 
 func (b *Bot) SendMessage(userID int64, text string) error {
