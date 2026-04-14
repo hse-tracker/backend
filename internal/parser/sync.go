@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,12 +17,13 @@ type Notifier interface {
 }
 
 type SyncSubject struct {
-	ID              int64  `db:"id"`
-	GroupID         int64  `db:"group_id"`
-	Name            string `db:"name"`
-	URL             string `db:"url"`
-	NameColumnIndex int    `db:"name_column_index"`
-	DataStartRow    int    `db:"data_start_row"`
+	ID              int64      `db:"id"`
+	GroupID         int64      `db:"group_id"`
+	Name            string     `db:"name"`
+	URL             string     `db:"url"`
+	NameColumnIndex int        `db:"name_column_index"`
+	DataStartRow    int        `db:"data_start_row"`
+	LastParsedAt    *time.Time `db:"last_parsed_at"`
 }
 
 type SyncUser struct {
@@ -59,11 +61,19 @@ func StartSyncWorker(db *sqlx.DB, credsPath string, bot Notifier, interval time.
 	}()
 }
 
+func formatNodeName(name string) string {
+	if num, err := strconv.Atoi(name); err == nil && num > 45000 && num < 50000 {
+		t := time.Date(1899, 12, 30, 0, 0, 0, 0, time.UTC)
+		return t.AddDate(0, 0, num).Format("02.01.2006")
+	}
+	return name
+}
+
 func syncAllGrades(ctx context.Context, db *sqlx.DB, credsPath string, bot Notifier) error {
 	// get subjects with available grade structure
 	var subjects []SyncSubject
 	query := `
-		SELECT id, group_id, name, url, name_column_index, data_start_row
+		SELECT id, group_id, name, url, name_column_index, data_start_row, last_parsed_at
 		FROM subjects
 		WHERE status = 'ready' AND name_column_index IS NOT NULL AND data_start_row IS NOT NULL`
 
@@ -109,6 +119,9 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 	if err := db.SelectContext(ctx, &nodes, `SELECT id, name, column_index FROM grade_structures WHERE subject_id = $1 AND column_index IS NOT NULL`, sub.ID); err != nil {
 		return err
 	}
+
+	var rootColumnIndex sql.NullInt64
+	_ = db.GetContext(ctx, &rootColumnIndex, `SELECT column_index FROM grade_structures WHERE subject_id = $1 AND parent_id IS NULL LIMIT 1`, sub.ID)
 
 	// iterating sheet rows starting with data_start_row index
 	for rowIndex := sub.DataStartRow; rowIndex < len(rawValues); rowIndex++ {
@@ -163,14 +176,34 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 					continue
 				}
 
-				if isChanged {
-					msg := fmt.Sprintf("🔔 Обновлена оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nБыло: %s ➡️ Стало: **%s**", sub.Name, node.Name, oldVal, newVal)
-					bot.SendMessage(userID, msg)
-					time.Sleep(1 * time.Second)
-				} else if isNew {
-					msg := fmt.Sprintf("🔔 Выставлена новая оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nОценка: **%s**", sub.Name, node.Name, newVal)
-					bot.SendMessage(userID, msg)
-					time.Sleep(1 * time.Second)
+				var totalScore string
+				if rootColumnIndex.Valid {
+					idx := int(rootColumnIndex.Int64)
+					if idx < len(row) {
+						totalScore = cellString(row[idx])
+					}
+				}
+
+				isInitialSync := sub.LastParsedAt == nil
+
+				if !isInitialSync {
+					formattedNodeName := formatNodeName(node.Name)
+
+					if isChanged {
+						msg := fmt.Sprintf("🔔 Обновлена оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nБыло: %s ➡️ Стало: **%s**", sub.Name, formattedNodeName, oldVal, newVal)
+						if totalScore != "" {
+							msg += fmt.Sprintf("\n\nТекущий итог: **%s**", totalScore)
+						}
+						bot.SendMessage(userID, msg)
+						time.Sleep(1 * time.Second)
+					} else if isNew {
+						msg := fmt.Sprintf("🔔 Выставлена новая оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nОценка: **%s**", sub.Name, formattedNodeName, newVal)
+						if totalScore != "" {
+							msg += fmt.Sprintf("\n\nТекущий итог: **%s**", totalScore)
+						}
+						bot.SendMessage(userID, msg)
+						time.Sleep(1 * time.Second)
+					}
 				}
 			}
 		}
