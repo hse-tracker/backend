@@ -144,6 +144,8 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 
 		log.Printf("[Sync] Processing student: %s (ID: %d)", studentName, userID)
 
+		var pendingMessages []string
+
 		// check users grades
 		for _, node := range nodes {
 			if len(row) <= node.ColumnIndex {
@@ -188,22 +190,38 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 
 				if !isInitialSync {
 					formattedNodeName := formatNodeName(node.Name)
+					var msg string
 
 					if isChanged {
-						msg := fmt.Sprintf("🔔 Обновлена оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nБыло: %s ➡️ Стало: **%s**", sub.Name, formattedNodeName, oldVal, newVal)
+						msg = fmt.Sprintf("🔔 Обновлена оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nБыло: %s ➡️ Стало: **%s**", sub.Name, formattedNodeName, oldVal, newVal)
 						if totalScore != "" {
 							msg += fmt.Sprintf("\n\nТекущий итог: **%s**", totalScore)
 						}
-						bot.SendMessage(userID, msg)
-						time.Sleep(1 * time.Second)
 					} else if isNew {
-						msg := fmt.Sprintf("🔔 Выставлена новая оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nОценка: **%s**", sub.Name, formattedNodeName, newVal)
+						msg = fmt.Sprintf("🔔 Выставлена новая оценка!\n\nПредмет: **%s**\nЭлемент: **%s**\nОценка: **%s**", sub.Name, formattedNodeName, newVal)
 						if totalScore != "" {
 							msg += fmt.Sprintf("\n\nТекущий итог: **%s**", totalScore)
 						}
-						bot.SendMessage(userID, msg)
-						time.Sleep(1 * time.Second)
 					}
+
+					if msg != "" {
+						pendingMessages = append(pendingMessages, msg)
+					}
+				}
+			}
+		}
+
+		if len(pendingMessages) > 0 {
+			if len(pendingMessages) >= 3 {
+				// first-time sync
+				summaryMsg := fmt.Sprintf("🔔 Твои оценки по предмету **%s** синхронизированы! Подробности в приложении", sub.Name)
+				bot.SendMessage(userID, summaryMsg)
+				time.Sleep(1 * time.Second)
+			} else {
+				// regular sync
+				for _, msg := range pendingMessages {
+					bot.SendMessage(userID, msg)
+					time.Sleep(1 * time.Second)
 				}
 			}
 		}
