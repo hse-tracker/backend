@@ -144,7 +144,6 @@ func syncSingleSubject(ctx context.Context, db *sqlx.DB, sub SyncSubject, credsP
 
 		log.Printf("[Sync] Processing student: %s (ID: %d)", studentName, userID)
 
-		// БУФЕР СООБЩЕНИЙ ДЛЯ АНТИСПАМА
 		var pendingMessages []string
 
 		// check users grades
