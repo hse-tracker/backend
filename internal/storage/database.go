@@ -65,17 +65,28 @@ func RegisterUser(db *sqlx.DB, tgID int64, fullName string, groupName string) (*
 	}, nil
 }
 
+var ErrSubjectAlreadyExists = errors.New("subject with this url already exists in the group")
+
 // TODO: add groupConnected handler
-func AddSubject(db *sqlx.DB, creatorID int64, groupID int64,
-	name string, url string) (int64, error) {
+func AddSubject(db *sqlx.DB, creatorID int64, groupID int64, name string, url string) (int64, error) {
 	log.Printf("[Storage] DB AddSubject: Name='%s', GroupID=%d, CreatorID=%d", name, groupID, creatorID)
+
+	var existingID int64
+	checkQuery := `SELECT id FROM subjects WHERE group_id = $1 AND url = $2 LIMIT 1`
+	err := db.Get(&existingID, checkQuery, groupID, url)
+	if err == nil {
+		return 0, ErrSubjectAlreadyExists
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("error checking existing subject: %w", err)
+	}
+
 	var newSubjectID int64
 	query := `
 		INSERT INTO subjects (creator_id, group_id, name, url, group_connected, status)
 		VALUES ($1, $2, $3, $4, $5, 'processing')
 		RETURNING id`
 
-	err := db.QueryRowx(query, creatorID, groupID, name, url, true).Scan(&newSubjectID)
+	err = db.QueryRowx(query, creatorID, groupID, name, url, true).Scan(&newSubjectID)
 	if err != nil {
 		return 0, fmt.Errorf("error inserting subject: %w", err)
 	}

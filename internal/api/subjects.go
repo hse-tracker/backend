@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"errors"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
@@ -31,13 +32,22 @@ func CreateSubjectHandler(db *sqlx.DB, cfg *config.Config) http.HandlerFunc {
 		var req CreateSubjectRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			http.Error(w, "invalid json request", 400)
+			http.Error(w, "invalid json request", http.StatusBadRequest)
 			return
 		}
 
 		subjectID, err := storage.AddSubject(db, userID, groupID, req.Name, req.URL)
 		if err != nil {
-			http.Error(w, "internal error", 500)
+			w.Header().Set("Content-Type", "application/json")
+			if errors.Is(err, storage.ErrSubjectAlreadyExists) {
+				w.WriteHeader(http.StatusConflict) // 409 Conflict
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"error": "Предмет с такой ссылкой уже был добавлен в вашу группу ранее.",
+				})
+				return
+			}
+			
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 
