@@ -167,6 +167,60 @@ func (b *Bot) Start(adminIDs []int64) error {
 		return c.Send(doc)
 	})
 
+	bot.Handle("/mailing", func(c telebot.Context) error {
+		isAdmin := false
+		for _, id := range adminIDs {
+			if c.Sender().ID == id {
+				isAdmin = true
+				break
+			}
+		}
+		if !isAdmin {
+			return c.Send("У вас нет прав администратора.")
+		}
+
+		log.Printf("[Bot] Admin %d requested mailing", c.Sender().ID)
+
+		rows, err := b.db.Query(`
+		SELECT id
+		FROM users
+	`)
+		if err != nil {
+			log.Printf("[Bot] failed to query mailing list: %v", err)
+			return c.Send("error")
+		}
+		defer func(rows *sql.Rows) {
+			err := rows.Close()
+			if err != nil {
+
+			}
+		}(rows)
+
+		album := &telebot.Album{
+			&telebot.Photo{
+				File:    telebot.FromDisk("materials/Frame_mailing.jpg"),
+				Caption: "Считать оценки стало удобнее ✅\n\nМы обновили дизайн калькулятора оценок в @hsetrackerbot, чтобы тебе было проще понять, сколько баллов по предметам нужно набрать до желаемого итога.\n\nТеперь, чтобы посчитать результат, ты можешь:\n\n1️⃣ Нажать на любой кружочек с нужным элементом контроля\n2️⃣ Через ползунок снизу выставить гипотетическую оценку за этот элемент\n3️⃣ Посмотреть, как изменится итоговая оценка по предмету\n\nА чтобы не запутаться, выбранный элемент контроля будет подсвечиваться сверху прямо в формуле оценки.\n\nСчитай оценки в @hsetrackerbot и больше не гадай, сколько осталось получить баллов!",
+			},
+		}
+
+		for rows.Next() {
+			var userID int64
+			if err := rows.Scan(&userID); err != nil {
+				log.Printf("[Bot] failed to scan mailing row: %v", err)
+				continue
+			}
+
+			recipient := &telebot.Chat{ID: userID}
+
+			if err, _ := b.api.SendAlbum(recipient, *album); err != nil {
+				log.Printf("[Bot] failed to send mailing to %d: %v", userID, err)
+				continue
+			}
+		}
+
+		return c.Send("success")
+	})
+
 	log.Println("Telegram Bot started!")
 	bot.Start()
 	return nil
