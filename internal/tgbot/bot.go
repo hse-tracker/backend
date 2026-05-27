@@ -182,8 +182,8 @@ func (b *Bot) Start(adminIDs []int64) error {
 		log.Printf("[Bot] Admin %d requested mailing", c.Sender().ID)
 
 		rows, err := b.db.Query(`
-		SELECT id
-		FROM users
+		SELECT user_id
+		FROM tg_reminders
 	`)
 		if err != nil {
 			log.Printf("[Bot] failed to query mailing list: %v", err)
